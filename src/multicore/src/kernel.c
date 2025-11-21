@@ -10,6 +10,7 @@
 #include "mini_uart.h"
 #include "sys.h"
 #include "user.h"
+#include "spinlock.h"
 
 
 void kernel_process(){
@@ -32,7 +33,7 @@ void kernel_main()
 	printf("kernel boots ...\n\r");
 
 	irq_vector_init();
-	timer_init();
+	//timer_init();
 //	generic_timer_init();
 	enable_interrupt_controller();
 	enable_irq();
@@ -44,6 +45,11 @@ void kernel_main()
 	}
 
 	while (1){
-		schedule();
+    printf("Acquiring Lock...\n");
+    lock();
+    printf("Lock acquired !\n");
+    //lock();
+    unlock();
+    printf("Unlocked the door !\n");
 	}
 }

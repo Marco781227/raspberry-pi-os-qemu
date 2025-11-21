@@ -1,6 +1,7 @@
 #include "arm/sysregs.h"
 #include "entry.h"
 #include "sys.h"
+#include "spinlock.h"
 
 	.macro handle_invalid_entry el, type
 	kernel_entry \el
