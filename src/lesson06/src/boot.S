@@ -13,6 +13,7 @@ _start:
 	b	proc_hang
 
 proc_hang:
+	wfe
 	b proc_hang
 
 master:
@@ -57,6 +58,55 @@ el1_entry:
 	adr	x1, bss_end
 	sub	x1, x1, x0
 	bl 	memzero
+
+.globl start_other_cores
+start_other_cores:
+    adr x0, secondary_start     // ADR charge dans x0 l’adresse relative du label secondary_start.  
+
+    // Mailboxes locaux RPi3 (base 0x40000000, write-set pour core1-3)
+    // core1
+    ldr x1, =0x4000009C
+    str x0, [x1] // Quand tu te réveilles, core1, exécute à partir de secondary_start.
+
+    // core2
+    ldr x1, =0x400000AC
+    str x0, [x1] // Quand tu te réveilles, core2 , exécute à partir de secondary_start.
+
+
+    // core3
+    ldr x1, =0x400000BC
+    str x0, [x1] // ... 
+
+    dsb sy                       // s'assurer que les écritures sont visibles 
+    sev                          // réveiller les cores en WFE
+    ret
+
+// Point d’entrée des cores secondaires (PC = secondary_start)
+.globl secondary_start
+secondary_start:
+    // core_id = MPIDR_EL1[7:0]
+    mrs x0, mpidr_el1 // MPIDR_EL1, qui contient : cluster ID numéro de core (affinity level 0)
+    and x0, x0, #0xFF            // x0 = core_id (1,2,3)
+
+    // sp = LOW_MEMORY + PAGE_SIZE * core_id
+    ldr x1, =LOW_MEMORY
+    ldr x2, =PAGE_SIZE
+    madd sp, x0, x2, x1 // Chaque cœur a sa propre pile grâce au calcul
+
+    // Appeler secondary_main() en C
+    bl  secondary_main
+
+sec_hang:
+    wfe
+    b   sec_hang
+
+// Helper C : renvoyer le core_id courant
+.globl get_core_id
+get_core_id:
+    mrs x0, mpidr_el1
+    and x0, x0, #0xFF
+    ret
+
 
 #ifdef USE_QEMU
 // A workaround for QEMU's quirks on MMU emulation, which also showcases how __create_page_tables
