@@ -39,7 +39,7 @@ void show_invalid_entry_message(int type, unsigned long esr, unsigned long addre
 	printf("%s, ESR: %x, address: %x\r\n", entry_error_messages[type], esr, address);
 }
 
-#if 0
+#if 1
 void handle_irq(void)
 {
 	unsigned int irq = get32(INT_SOURCE_0);
@@ -52,7 +52,7 @@ void handle_irq(void)
 	}
 }
 #endif
-
+#if 0
 void handle_irq(void)
 {
 	unsigned int irq = get32(IRQ_PENDING_1);
@@ -64,3 +64,4 @@ void handle_irq(void)
 			printf("Inknown pending irq: %x\r\n", irq);
 	}
 }
+#endif

@@ -3,6 +3,8 @@
 #include "mm.h"
 #include "peripherals/base.h"
 
+.extern secondary_main
+
 .section ".text.boot"
 
 .globl _start
@@ -13,7 +15,7 @@ _start:
 	b	proc_hang
 
 proc_hang:
-	wfe
+	wfi
 	b proc_hang
 
 master:
@@ -72,10 +74,11 @@ start_other_cores:
     ldr x1, =0x400000AC
     str x0, [x1] // Quand tu te réveilles, core2 , exécute à partir de secondary_start.
 
-
     // core3
     ldr x1, =0x400000BC
     str x0, [x1] // ... 
+
+
 
     dsb sy                       // s'assurer que les écritures sont visibles 
     sev                          // réveiller les cores en WFE
@@ -84,6 +87,8 @@ start_other_cores:
 // Point d’entrée des cores secondaires (PC = secondary_start)
 .globl secondary_start
 secondary_start:
+
+
     // core_id = MPIDR_EL1[7:0]
     mrs x0, mpidr_el1 // MPIDR_EL1, qui contient : cluster ID numéro de core (affinity level 0)
     and x0, x0, #0xFF            // x0 = core_id (1,2,3)
