@@ -10,16 +10,7 @@
 #include "irq.h"
 
 
-void secondary_main(void)
-{
-    init_lancement_coeur_secondaire();
-
-    while (1) {
-        asm("wfi");
-    }
-}
-
-void init_lancement_coeur_secondaire(void)
+void init_coeur_secondaire(void)
 {
     int id_core = get_core_id();
 

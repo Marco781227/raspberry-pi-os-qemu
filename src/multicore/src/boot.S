@@ -3,8 +3,6 @@
 #include "mm.h"
 #include "peripherals/base.h"
 
-.extern secondary_main
-
 .section ".text.boot"
 
 .globl _start
@@ -19,7 +17,7 @@ proc_hang:
 	b proc_hang
 
 wake_other_cores:
-	adr x0,proc_hang
+	adr x0,secondary_start
 	mov x1, #0xd8
 	str x0, [x1,#8]!
 	str x0, [x1,#8]!
@@ -105,19 +103,8 @@ secondary_start:
     ldr x2, =PAGE_SIZE
     madd x9, x0, x2, x1 // Chaque cœur a sa propre pile grâce au calcul
 	mov sp, x9
-    // Appeler secondary_main() en C
-    bl  secondary_main
 
-sec_hang:
-    wfi
-    b   sec_hang
-
-// Helper C : renvoyer le core_id courant
-.globl get_core_id
-get_core_id:
-    mrs x0, mpidr_el1
-    and x0, x0, #0xFF
-    ret
+    bl init_coeur_secondaire
 
 
 #ifdef USE_QEMU
