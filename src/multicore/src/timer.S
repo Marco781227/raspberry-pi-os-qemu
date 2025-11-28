@@ -6,6 +6,8 @@
  *  https://developer.arm.com/docs/ddi0487/ca/arm-architecture-reference-manual-armv8-for-armv8-a-architecture-profile
  */
 
+.extern handle_generic_timer_irq
+
 .globl gen_timer_init
 gen_timer_init:
   mov x0, #1
@@ -14,7 +16,8 @@ gen_timer_init:
 
 .globl gen_timer_reset
 gen_timer_reset:
-    mov x0, #1
-  lsl x0, x0, #24
+  mov x0,#0x50000
+  //  mov x0, #1
+  //lsl x0, x0, #24
   msr CNTP_TVAL_EL0, x0
     ret
