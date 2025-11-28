@@ -19,7 +19,7 @@
 
 #define PF_KTHREAD 0x00000002
 
-extern struct task_struct *current;
+extern struct task_struct *currents[NB_CPU];
 extern struct task_struct *task[NR_TASKS];
 extern int nr_tasks;
 
@@ -66,10 +66,10 @@ struct task_struct {
 };
 
 extern void sched_init(void);
-extern void schedule(void);
+extern void schedule(int core_id);
 extern void timer_tick(void);
-extern void preempt_disable(void);
-extern void preempt_enable(void);
+extern void preempt_disable(int core_id);
+extern void preempt_enable(int core_id);
 extern void switch_to(struct task_struct *next);
 extern void cpu_switch_to(struct task_struct *prev, struct task_struct *next);
 extern void exit_process(void);
