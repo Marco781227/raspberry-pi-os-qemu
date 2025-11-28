@@ -12,7 +12,9 @@ src/*/build
 **/*.list
 **/*.cmd
 
-/.vscode/*
+**/.vscode/*
+**/.cache/*
+**/.clang-format
 
 *.json
 
