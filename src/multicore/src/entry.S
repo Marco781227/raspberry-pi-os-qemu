@@ -5,6 +5,7 @@
 
 	.macro handle_invalid_entry el, type
 	kernel_entry \el
+  bl lock
 	mov	x0, #\type
 	mrs	x1, esr_el1
 	mrs	x2, elr_el1
@@ -35,7 +36,6 @@
 	stp	x26, x27, [sp, #16 * 13]
 	stp	x28, x29, [sp, #16 * 14]
 
-    bl lock // mutex acquisition
 
 	.if	\el == 0
 	mrs	x21, sp_el0
@@ -48,6 +48,7 @@
 
 	stp	x30, x21, [sp, #16 * 15]
 	stp	x22, x23, [sp, #16 * 16]
+
 	.endm
 
 	.macro	kernel_exit, el
@@ -60,8 +61,7 @@
 
 	msr	elr_el1, x22
 	msr	spsr_el1, x23
-
-    bl unlock // mutex free
+  
 
 	ldp	x0, x1, [sp, #16 * 0]
 	ldp	x2, x3, [sp, #16 * 1]
@@ -151,16 +151,21 @@ error_invalid_el0_32:
 
 el1_irq:
 	kernel_entry 1
-	bl	handle_irq
+  bl lock
+  bl handle_irq
+  bl unlock
 	kernel_exit 1
 
 el0_irq:
 	kernel_entry 0
+  bl lock
 	bl	handle_irq
+  bl unlock
 	kernel_exit 0
 
 el0_sync:
 	kernel_entry 0
+  bl lock
 	mrs	x25, esr_el1				// read the syndrome register
 	lsr	x24, x25, #ESR_ELx_EC_SHIFT		// exception class
 	cmp	x24, #ESR_ELx_EC_SVC64			// SVC in 64-bit state
@@ -189,6 +194,7 @@ ni_sys:
 ret_from_syscall:
 	bl	disable_irq
 	str	x0, [sp, #S_X0]				// returned x0
+  bl unlock
 	kernel_exit 0
 
 el0_da:
@@ -201,6 +207,7 @@ el0_da:
 	handle_invalid_entry 0, DATA_ABORT_ERROR
 1:
 	bl disable_irq
+  bl unlock
 	kernel_exit 0
 
 .globl ret_from_fork
@@ -211,6 +218,7 @@ ret_from_fork:
 	blr	x19
 ret_to_user:
 	bl disable_irq
+  bl unlock
 	kernel_exit 0
 
 

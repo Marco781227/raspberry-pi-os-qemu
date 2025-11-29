@@ -24,6 +24,7 @@ void kernel_process() {
 }
 
 void kernel_main() {
+    lock();
     uart_init();
     init_printf(NULL, putc);
 
