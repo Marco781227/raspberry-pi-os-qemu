@@ -5,7 +5,6 @@
 
 	.macro handle_invalid_entry el, type
 	kernel_entry \el
-  bl lock
 	mov	x0, #\type
 	mrs	x1, esr_el1
 	mrs	x2, elr_el1
