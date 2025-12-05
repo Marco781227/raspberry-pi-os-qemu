@@ -126,7 +126,7 @@ void map_page(struct task_struct *task, unsigned long va, unsigned long page) {
 
 /* duplicate the contents of the @current task's user pages to the @dst task */
 int copy_virt_memory(struct task_struct *dst) {
-    int core_id = get_core_id();
+    unsigned char core_id = get_core_id();
     struct task_struct *src = currents[core_id];
     for (int i = 0; i < src->mm.user_pages_count; i++) {
         unsigned long kernel_va =
@@ -142,7 +142,7 @@ int copy_virt_memory(struct task_struct *dst) {
 static int ind = 1;
 
 int do_mem_abort(unsigned long addr, unsigned long esr) {
-    int core_id = get_core_id();
+    unsigned char core_id = get_core_id();
     unsigned long dfs = (esr & 0b111111);
     if ((dfs & 0b111100) == 0b100) {
         unsigned long page = get_free_page();

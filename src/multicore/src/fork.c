@@ -6,7 +6,7 @@
 
 int copy_process(unsigned long clone_flags, unsigned long fn,
                  unsigned long arg) {
-    int core_id = get_core_id();
+    unsigned char core_id = get_core_id();
     preempt_disable(core_id);
     struct task_struct *p;
 
@@ -49,7 +49,7 @@ int copy_process(unsigned long clone_flags, unsigned long fn,
 
 int move_to_user_mode(unsigned long start, unsigned long size,
                       unsigned long pc) {
-    int core_id = get_core_id();
+    unsigned char core_id = get_core_id();
     struct pt_regs *regs = task_pt_regs(currents[core_id]);
     regs->pstate = PSR_MODE_EL0t;
     regs->pc = pc;

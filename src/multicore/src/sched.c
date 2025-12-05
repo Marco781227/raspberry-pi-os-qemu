@@ -9,15 +9,15 @@ struct task_struct *task[NR_TASKS] = {
 };
 int nr_tasks = 1;
 
-void preempt_disable(int core_id) {
+void preempt_disable(unsigned char core_id) {
     currents[core_id]->preempt_count++;
 }
 
-void preempt_enable(int core_id) {
+void preempt_enable(unsigned char core_id) {
     currents[core_id]->preempt_count--;
 }
 
-void _schedule(int core_id) {
+void _schedule(unsigned char core_id) {
     preempt_disable(core_id);
     int next, c;
     struct task_struct *p;
@@ -45,13 +45,13 @@ void _schedule(int core_id) {
     preempt_enable(core_id);
 }
 
-void schedule(int core_id) {
+void schedule(unsigned char core_id) {
     currents[core_id]->counter = 0;
     _schedule(core_id);
 }
 
 void switch_to(struct task_struct *next) {
-    int core_id = get_core_id();
+    unsigned char core_id = get_core_id();
     if (currents[core_id] == next)
         return;
     struct task_struct *prev = currents[core_id];
@@ -61,12 +61,12 @@ void switch_to(struct task_struct *next) {
 }
 
 void schedule_tail(void) {
-    int core_id = get_core_id();
+    unsigned char core_id = get_core_id();
     preempt_enable(core_id);
 }
 
 void timer_tick() {
-    int core_id = get_core_id();
+    unsigned char core_id = get_core_id();
     --currents[core_id]->counter;
     if (currents[core_id]->counter > 0 ||
         currents[core_id]->preempt_count > 0) {
@@ -79,7 +79,7 @@ void timer_tick() {
 }
 
 void exit_process() {
-    int core_id = get_core_id();
+    unsigned char core_id = get_core_id();
     preempt_disable(core_id);
     for (int i = 0; i < NR_TASKS; i++) {
         if (task[i] == currents[core_id]) {

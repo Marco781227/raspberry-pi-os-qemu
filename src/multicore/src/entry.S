@@ -35,6 +35,7 @@
 	stp	x26, x27, [sp, #16 * 13]
 	stp	x28, x29, [sp, #16 * 14]
 
+    bl lock // mutex acquisition
 
 	.if	\el == 0
 	mrs	x21, sp_el0
@@ -60,7 +61,8 @@
 
 	msr	elr_el1, x22
 	msr	spsr_el1, x23
-  
+
+    bl unlock // mutex free
 
 	ldp	x0, x1, [sp, #16 * 0]
 	ldp	x2, x3, [sp, #16 * 1]

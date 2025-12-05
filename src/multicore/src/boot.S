@@ -9,11 +9,19 @@
 _start:
 	mrs	x0, mpidr_el1
 	and	x0, x0,#0xFF		// Check processor id
-  adrp x3, proc_hang
+
+	adrp x2, proc_hang
+    add x2, x2, #:lo12:proc_hang
+    mov x1, #0xd8
+    str x2, [x1,#8]!
+    str x2, [x1,#8]!
+    str x2, [x1,#8]
+
 	cbz	x0, master		// Hang for all non-primary CPU
 	b	proc_hang
 
 proc_hang:
+	wfi
 	b proc_hang
 
 master:

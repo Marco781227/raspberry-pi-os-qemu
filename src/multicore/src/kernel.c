@@ -43,7 +43,7 @@ void kernel_main() {
     }
 
     while (1) {
-        int core_id = get_core_id();
+        unsigned char core_id = get_core_id();
         schedule(core_id);
     }
 }
