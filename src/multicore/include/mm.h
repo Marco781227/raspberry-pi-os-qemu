@@ -5,7 +5,7 @@
 
 #define VA_START 			0xffff000000000000
 
-#define PHYS_MEMORY_SIZE 		0x40000000
+#define PHYS_MEMORY_SIZE 		0x40000000 
 
 #define PAGE_MASK			0xfffffffffffff000
 #define PAGE_SHIFT	 		12

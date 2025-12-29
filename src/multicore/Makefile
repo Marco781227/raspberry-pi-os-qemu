@@ -1,4 +1,4 @@
-CHAINPREFIX ?= aarch64-elf-
+CHAINPREFIX ?= aarch64-linux-gnu-
 
 COPS = -Wall -nostdlib -fno-stack-protector -nostartfiles -ffreestanding -Iinclude -mgeneral-regs-only -g -O0 -DUSE_QEMU
 ASMOPS = -Iinclude -g -DUSE_QEMU
@@ -29,4 +29,3 @@ DEP_FILES = $(OBJ_FILES:%.o=%.d)
 kernel8.img: $(SRC_DIR)/linker-qemu.ld $(OBJ_FILES)
 	$(CHAINPREFIX)ld -T $(SRC_DIR)/linker-qemu.ld -o $(BUILD_DIR)/kernel8.elf  $(OBJ_FILES)
 	$(CHAINPREFIX)objcopy $(BUILD_DIR)/kernel8.elf -O binary kernel8.img
-	compiledb -n make

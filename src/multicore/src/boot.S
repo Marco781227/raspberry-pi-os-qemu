@@ -10,21 +10,109 @@ _start:
 	mrs	x0, mpidr_el1
 	and	x0, x0,#0xFF		// Check processor id
 
-	adrp x2, proc_hang
-    add x2, x2, #:lo12:proc_hang
-    mov x1, #0xd8
-    str x2, [x1,#8]!
-    str x2, [x1,#8]!
-    str x2, [x1,#8]
-
 	cbz	x0, master		// Hang for all non-primary CPU
 	b	proc_hang
 
+.globl _start_two
+_start_two:
+
+    mrs    x0, mpidr_el1
+    and    x0, x0,#0xFF        // Check processor id
+
+    adrp x2, secondary_start
+    add x2, x2, #:lo12:secondary_start
+    mov x1, #0xd8
+    str x2, [x1,#8]!
+    str x2, [x1,#8]!
+    str x2, [x1,#8]!
+
+	ret 
+
+.globl secondary_start
+secondary_start:
+
+    // core_id = MPIDR_EL1[7:0]
+    mrs x0, mpidr_el1 // MPIDR_EL1, qui contient : cluster ID numéro de core (affinity level 0)
+    and x0, x0, #0xFF            // x0 = core_id (1,2,3)
+
+    // sp = LOW_MEMORY + PAGE_SIZE * core_id
+    ldr x1, =LOW_MEMORY
+    ldr x2, =PAGE_SIZE
+    madd x9, x0, x2, x1 // Chaque cœur a sa propre pile grâce au calcul
+	mov sp, x9
+
+    //bl init_coeur_secondaire
+	b master_secondary
+	
 proc_hang:
 	wfi
 	b proc_hang
 
+.globl master_secondary
+master_secondary:
+
+    // 1. S'assurer qu'EL1 sera en AArch64
+    mrs x0, hcr_el2
+    orr x0, x0, #(1 << 31)     // HCR_EL2.RW = 1
+    msr hcr_el2, x0
+
+    // 2. Préparer l'état après ERET
+    mov x0, #SPSR_VALUE       // EL1h, interrupts masked
+    msr spsr_el2, x0
+
+    // 3. Adresse d'entrée EL1 secondaire
+    adr x0, el1_entry_secondary
+    msr elr_el2, x0
+
+    // 4. Transition EL2 → EL1
+    eret
+
+.globl el1_entry_secondary
+el1_entry_secondary:
+
+    // Stack déjà positionnée dans secondary_start
+    // ou recalculée ici si tu préfères
+
+    adrp x0, idmap_dir
+    msr ttbr0_el1, x0
+
+    // 1. Charger les tables créées par le primaire
+    adrp x0, pg_dir
+    msr ttbr1_el1, x0
+
+    // 2. Configurer MMU
+    ldr x0, =(TCR_VALUE)
+    msr tcr_el1, x0
+
+    ldr x0, =(MAIR_VALUE)
+    msr mair_el1, x0
+
+    // 3. Activer le MMU
+    mov x0, #SCTLR_MMU_ENABLED
+    msr sctlr_el1, x0
+    isb
+    // après avoir activé le MMU + isb
+    mrs x0, mpidr_el1
+    and x0, x0, #0xFF          // core_id
+
+    ldr x1, =LOW_MEMORY
+    ldr x2, =PAGE_SIZE
+    madd x3, x0, x2, x1        // offset = LOW_MEMORY + core_id*PAGE_SIZE
+
+    mov x4, #VA_START
+    add sp, x4, x3             // SP = VA_START + (LOW_MEMORY + offset)
+	mov x9, sp
+	and x9, x9, #~0xF
+	mov sp, x9	
+
+    // 4. Entrée kernel secondaire
+	ldr	x2, =init_coeur_secondaire
+    blr x2
+	
+	b proc_hang
+
 master:
+
 	ldr	x0, =SCTLR_VALUE_MMU_DISABLED
 	msr	sctlr_el1, x0
 
@@ -107,10 +195,12 @@ el1_entry:
 	ldr	x0, =(MAIR_VALUE)
 	msr	mair_el1, x0
 
+	bl _start_two
 	ldr	x2, =kernel_main
 
 	mov	x0, #SCTLR_MMU_ENABLED
 	msr	sctlr_el1, x0	// BOOM! we are on virtual after this.
+
 
 	br 	x2
 
@@ -187,30 +277,51 @@ __create_idmap:
 #endif
 
 __create_page_tables:
-	mov		x29, x30						// save return address
+    mov     x29, x30
 
-	// clear the mem region backing pgtables
-	adrp 	x0, pg_dir
-	mov		x1, #PG_DIR_SIZE
-	bl 		memzero
+    // clear the mem region backing pgtables
+    adrp    x0, pg_dir
+    mov     x1, #PG_DIR_SIZE
+    bl      memzero
 
-	// allocate one PUD & one PMD; link PGD (pg_dir)->PUD, and PUD->PMD
-	adrp	x0, pg_dir
-	mov		x1, #VA_START
-	create_pgd_entry x0, x1, x2, x3		// after this, x0 points to the new PMD table
+    adrp    x0, pg_dir
+    mov     x1, #VA_START
+    create_pgd_entry x0, x1, x2, x3     // x0 = PMD0
+    mov     x20, x0                     // PMD0
 
-	/* Mapping kernel and init stack. Phys addr range: 0--DEVICE_BASE */
-	mov 	x1, xzr				// x1 = starting phys addr. set x1 to 0.
-	mov 	x2, #VA_START		// x2 = the virtual base of the first section
-	ldr		x3, =(VA_START + DEVICE_BASE - SECTION_SIZE)  // x3 = the virtual base of the last section
-	create_block_map x0, x1, x2, x3, MMU_FLAGS, x4
 
-	/* Mapping device memory. Phys addr range: DEVICE_BASE--PHYS_MEMORY_SIZE(0x40000000) */
-	mov 	x1, #DEVICE_BASE					// x1 = start mapping from device base address
-	ldr 	x2, =(VA_START + DEVICE_BASE)				// x2 = first virtual address
-	ldr		x3, =(VA_START + PHYS_MEMORY_SIZE - SECTION_SIZE)	// x3 = the virtual base of the last section
-	create_block_map x0, x1, x2, x3, MMU_DEVICE_FLAGS, x4
+    // x10 = adresse du PUD (selon ta convention: pg_dir + PAGE_SIZE)
+    adrp    x10, pg_dir
+    add     x10, x10, #PAGE_SIZE        // PUD
 
-	mov	x30, x29						// restore return address
-	ret
+    // x21 = adresse du 2e PMD (choisir une page libre)
+    adrp    x21, pg_dir
+    add     x21, x21, #(3 * PAGE_SIZE)  // PMD1 (pg_dir + 3 pages)
 
+    // Lier PUD[1] -> PMD1
+    // (entrée 1 => offset 8, car 8 bytes par entrée)
+    orr     x12, x21, #MM_TYPE_PAGE_TABLE
+    str     x12, [x10, #8]
+
+
+    mov     x0, x20
+    mov     x1, xzr
+    mov     x2, #VA_START
+    ldr     x3, =(VA_START + DEVICE_BASE - SECTION_SIZE)
+    create_block_map x0, x1, x2, x3, MMU_FLAGS, x4
+
+    mov     x0, x20
+    mov     x1, #DEVICE_BASE
+    ldr     x2, =(VA_START + DEVICE_BASE)
+    ldr     x3, =(VA_START + PHYS_MEMORY_SIZE - SECTION_SIZE)
+    create_block_map x0, x1, x2, x3, MMU_DEVICE_FLAGS, x4
+
+
+    mov     x0, x21
+    ldr     x1, =0x40000000
+    ldr     x2, =(VA_START + 0x40000000)
+    ldr     x3, =(VA_START + 0x40000000)     // 1 bloc de 2MiB (end inclus dans ta macro)
+    create_block_map x0, x1, x2, x3, MMU_DEVICE_FLAGS, x4
+
+    mov     x30, x29
+    ret

@@ -11,6 +11,7 @@
 #include "timer.h"
 #include "user.h"
 #include "utils.h"
+#include "coeur_secondaire.h"
 
 void kernel_process() {
     printf("Kernel process started. EL %d\r\n", get_el());
@@ -28,12 +29,16 @@ void kernel_main() {
     init_printf(NULL, putc);
 
     printf("kernel boots ...\n\r");
+    int core_id = get_core_id();
+    printf("Coeur %d inti \n", core_id);
 
     irq_vector_init();
     // timer_init();
-    //	generic_timer_init();
+    generic_timer_init();
     enable_interrupt_controller();
     enable_irq();
+
+
 
     int res = copy_process(PF_KTHREAD, (unsigned long)&kernel_process, 0);
     if (res < 0) {

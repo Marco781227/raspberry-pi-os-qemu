@@ -22,11 +22,15 @@
 // See BCM2836 ARM-local peripherals at
 // https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2836/QA7_rev3.4.pdf
 
-#define TIMER_INT_CTRL_0    (0x40000040)
-#define INT_SOURCE_0        (LPBASE+0x60)
+//#define TIMER_INT_CTRL_0    (0x40000040)
+//#define INT_SOURCE_0        (LPBASE+0x60)
 
 #define TIMER_INT_CTRL_0_VALUE  (1 << 1)
 #define GENERIC_TIMER_INTERRUPT (1 << 1)
+
+#define VBASE (VA_START + 0x40000000)
+#define TIMER_INT_CTRL_0 (VBASE + 0x40)
+#define INT_SOURCE_0     (VBASE + 0x60)
 
 
 #endif  /*_P_IRQ_H */

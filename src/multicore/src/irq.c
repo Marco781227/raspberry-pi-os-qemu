@@ -3,6 +3,7 @@
 #include "timer.h"
 #include "entry.h"
 #include "peripherals/irq.h"
+#include "spinlock.h"
 
 const char *entry_error_messages[] = {
 	"SYNC_INVALID_EL1t",
@@ -28,10 +29,12 @@ const char *entry_error_messages[] = {
 
 void enable_interrupt_controller()
 {
-	put32(ENABLE_IRQS_1, SYSTEM_TIMER_IRQ_1);
+	//put32(ENABLE_IRQS_1, SYSTEM_TIMER_IRQ_1);
 
   // Enables Core 0 Timers interrupt control for the generic timer
-//  put32(TIMER_INT_CTRL_0, TIMER_INT_CTRL_0_VALUE);
+  	lock();
+	put32(TIMER_INT_CTRL_0 , TIMER_INT_CTRL_0_VALUE);
+	unlock();
 }
 
 void show_invalid_entry_message(int type, unsigned long esr, unsigned long address)
@@ -39,7 +42,7 @@ void show_invalid_entry_message(int type, unsigned long esr, unsigned long addre
 	printf("%s, ESR: %x, address: %x\r\n", entry_error_messages[type], esr, address);
 }
 
-#if 0
+#if 1
 void handle_irq(void)
 {
 	unsigned int irq = get32(INT_SOURCE_0);
@@ -52,7 +55,7 @@ void handle_irq(void)
 	}
 }
 #endif
-
+#if 0
 void handle_irq(void)
 {
 	unsigned int irq = get32(IRQ_PENDING_1);
@@ -64,3 +67,4 @@ void handle_irq(void)
 			printf("Inknown pending irq: %x\r\n", irq);
 	}
 }
+#endif
