@@ -55,6 +55,7 @@ void handle_irq(void)
 		default:
 	 printf("Inknown pending irq: %x\r\n", irq);
 	}
+  core_id = get_core_id();
   printf("Core %d : Finished\n",core_id);
 }
 

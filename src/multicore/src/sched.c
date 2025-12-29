@@ -26,7 +26,7 @@ void preempt_enable(unsigned char core_id) {
 }
 
 void _schedule(unsigned char core_id) {
-    printf("Core %d : SCHEDULE -- Disabling preemt of task : %d\n",core_id, currents[core_id]);
+    printf("Core %d : SCHEDULE -- Disabling preemt of task : %d with counter : %d\n",core_id, currents[core_id], currents[core_id]->counter);
     preempt_disable(core_id);
     printf("Core %d : Arrived in _schedule\n",core_id);
     int next, c;
@@ -52,7 +52,8 @@ void _schedule(unsigned char core_id) {
       task[next]->taken = 1;
     }
     switch_to(task[next]);
-    printf("Core %d : SCHEDULE -- Enabling preemt of task : %d\n",core_id, currents[core_id]);
+    core_id = get_core_id();
+    printf("Core %d : SCHEDULE -- Enabling preemt of task : %d with counter : %d\n",core_id, currents[core_id], currents[core_id]->counter);
     preempt_enable(core_id);
 }
 
@@ -74,6 +75,7 @@ void switch_to(struct task_struct *next) {
 
     printf("Core %d : Taking next, Prev : %d, Next : %d\n",core_id, prev, next);
     cpu_switch_to(prev, next);
+    core_id = get_core_id();
     printf("Core %d : Returning from cpu_switch_to, Prev : %d, Next : %d\n",core_id, prev, next);
 }
 
