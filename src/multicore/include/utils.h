@@ -8,5 +8,6 @@ extern unsigned long get_el(void);
 extern unsigned char get_core_id(void);
 extern void set_pgd(unsigned long pgd);
 extern unsigned long get_pgd();
+extern void start_cores(void);
 
 #endif /*_UTILS_H */

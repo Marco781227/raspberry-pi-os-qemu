@@ -4,6 +4,7 @@
 
 void uart_send ( char c )
 {
+  for(volatile int i=0; i<10000; i++);
 	while(1) {
 		if(get32(AUX_MU_LSR_REG)&0x20)
 			break;

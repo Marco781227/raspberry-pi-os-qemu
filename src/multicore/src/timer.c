@@ -2,6 +2,7 @@
 #include "printf.h"
 #include "sched.h"
 #include "peripherals/timer.h"
+#include "timer.h"
 
 const unsigned int interval = 200000;
 unsigned int curVal = 0;
@@ -34,15 +35,18 @@ void handle_timer_irq( void )
 	They are fully functional on both QEMU and Rpi3
 */
 
-//void generic_timer_init ( void )
-//{
-//	gen_timer_init();
-//	gen_timer_reset();
-//}
-//
-//void handle_generic_timer_irq( void )
-//{
-//	gen_timer_reset();
-//	timer_tick();
-//}
+void generic_timer_init ( void )
+{
+  unsigned char core_id = get_core_id();
+	gen_timer_init();
+	gen_timer_reset();
+}
+
+void handle_generic_timer_irq( void )
+{
+	gen_timer_reset();
+  unsigned char core_id = get_core_id();
+  printf("Core %d : Inside handle_generic_timer \n", core_id);
+	timer_tick();
+}
 

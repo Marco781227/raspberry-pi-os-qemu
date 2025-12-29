@@ -1,13 +1,21 @@
 #include "sched.h"
 #include "irq.h"
 #include "utils.h"
+#include <printf.h>
+#include "spinlock.h"
 
-static struct task_struct init_task = INIT_TASK;
-struct task_struct *currents[NB_CPU] = {[0] = &(init_task)};
+static struct task_struct init_task_0 = INIT_TASK;
+static struct task_struct init_task_1 = INIT_TASK;
+static struct task_struct init_task_2 = INIT_TASK;
+static struct task_struct init_task_3 = INIT_TASK;
+struct task_struct *currents[NB_CPU] = { &(init_task_0), &(init_task_1), &(init_task_2), &(init_task_3)};
 struct task_struct *task[NR_TASKS] = {
-    &(init_task),
+    &(init_task_0),
+    &(init_task_1),
+    &(init_task_2),
+    &(init_task_3),
 };
-int nr_tasks = 1;
+int nr_tasks = NB_CPU;
 
 void preempt_disable(unsigned char core_id) {
     currents[core_id]->preempt_count++;
@@ -19,27 +27,28 @@ void preempt_enable(unsigned char core_id) {
 
 void _schedule(unsigned char core_id) {
     preempt_disable(core_id);
+    printf("Core %d : Arrived in _schedule\n",core_id);
     int next, c;
     struct task_struct *p;
-    while (1) {
-        c = -1;
-        next = 0;
-        for (int i = 0; i < NR_TASKS; i++) {
-            p = task[i];
-            if (p && p->state == TASK_RUNNING && p->counter > c) {
-                c = p->counter;
-                next = i;
-            }
+    c = -1;
+    next = core_id;
+    for (int i = NB_CPU; i < NR_TASKS; i++) {
+        p = task[i];
+        if (p && p->state == TASK_RUNNING && p->counter > c && !p->taken) {
+            c = p->counter;
+            next = i;
         }
-        if (c) {
-            break;
-        }
-        for (int i = 0; i < NR_TASKS; i++) {
-            p = task[i];
-            if (p) {
-                p->counter = (p->counter >> 1) + p->priority;
-            }
-        }
+    }
+    if (c <= 0) {
+      for (int i = 0; i < NR_TASKS; i++) {
+          p = task[i];
+          if (p) {
+              p->counter = (p->counter >> 1) + p->priority;
+          }
+      }
+    }
+    else {
+      task[next]->taken = 1;
     }
     switch_to(task[next]);
     preempt_enable(core_id);
@@ -52,12 +61,20 @@ void schedule(unsigned char core_id) {
 
 void switch_to(struct task_struct *next) {
     unsigned char core_id = get_core_id();
+    printf("Core %d : Exiting switch-to\n",core_id);
     if (currents[core_id] == next)
         return;
+
     struct task_struct *prev = currents[core_id];
+    prev->taken = 0;
     currents[core_id] = next;
     set_pgd(next->mm.pgd);
+
+    printf("Core %d : Taking next, Prev : %d, Next : %d\n",core_id, prev, next);
+
+    unlock(); // Release the kernel before switching context
     cpu_switch_to(prev, next);
+    lock(); // Reentering the kernel necessitates a lock as it is a critical section
 }
 
 void schedule_tail(void) {
@@ -68,6 +85,7 @@ void schedule_tail(void) {
 void timer_tick() {
     unsigned char core_id = get_core_id();
     --currents[core_id]->counter;
+    printf("Core %d : Arrived in timer_tick, task : %d counter : %d, preemp : %d\n",core_id, currents[core_id], currents[core_id]->counter, currents[core_id]->preempt_count);
     if (currents[core_id]->counter > 0 ||
         currents[core_id]->preempt_count > 0) {
         return;

@@ -7,29 +7,28 @@
 
 .globl _start
 _start:
-	mrs	x0, mpidr_el1
-	and	x0, x0,#0xFF		// Check processor id
+	mrs	x19, mpidr_el1 
+	and	x19, x19, #0xFF	 // x19 Contains CoreID
+	b master	// Every core will execute the configuration protocol
 
-	adrp x2, proc_hang
-    add x2, x2, #:lo12:proc_hang
-    mov x1, #0xd8
-    str x2, [x1,#8]!
-    str x2, [x1,#8]!
-    str x2, [x1,#8]
-
-	cbz	x0, master		// Hang for all non-primary CPU
-	b	proc_hang
-
-proc_hang:
-	wfi
-	b proc_hang
+.globl start_cores
+start_cores:
+	adrp x2, _start
+  add x2, x2, #:lo12:_start
+  ldr x3, =VA_START
+  sub x2, x2, x3 // Since the PC will be virtual, we need to give the other cores a physical address by subtracting the virtual offset
+  mov x1, #0xd8
+  str x2, [x1,#8]!
+  str x2, [x1,#8]!
+  str x2, [x1,#8]
+  ret
 
 master:
 	ldr	x0, =SCTLR_VALUE_MMU_DISABLED
 	msr	sctlr_el1, x0
 
 	mrs x0, CurrentEL
-    lsr x0, x0, #2
+  lsr x0, x0, #2
 	cmp x0, #3
 	beq el3
 
@@ -62,6 +61,7 @@ el3:
 	eret
 
 el1_entry:
+  cbnz x19, skip_memzero_pagetable // Only let core 0 perform the bss setup
 	adr	x0, bss_begin
 	adr	x1, bss_end
 	sub	x1, x1, x0
@@ -88,14 +88,22 @@ el1_entry:
 // Cf: https://github.com/s-matyukevich/raspberry-pi-os/issues/8
 // https://www.raspberrypi.org/forums/viewtopic.php?t=222408
 	bl	__create_idmap
-	adrp	x0, idmap_dir
+skip_memzero_pagetable:
+	adrp	x0, idmap_dir // Only Core0 initiates the page table structure
 	msr	ttbr0_el1, x0
 #endif
 
-	bl 	__create_page_tables
+  cbnz x19, skip_create_tables // Only let core 0 perform the page table creation
+  bl __create_page_tables
+  dsb  ish
+  isb
+skip_create_tables:
 
+  // Each core has its own 4KB stack frame situated in the kernel memory section
 	mov	x0, #VA_START
-	add	sp, x0, #LOW_MEMORY
+  add x0, x0, #LOW_MEMORY
+  lsl x1, x19, #PAGE_SHIFT
+	sub	sp, x0, x1
 
 	adrp	x0, pg_dir
 	msr	ttbr1_el1, x0
@@ -107,12 +115,12 @@ el1_entry:
 	ldr	x0, =(MAIR_VALUE)
 	msr	mair_el1, x0
 
-	ldr	x2, =kernel_main
+	ldr	x20, =kernel_main
 
 	mov	x0, #SCTLR_MMU_ENABLED
 	msr	sctlr_el1, x0	// BOOM! we are on virtual after this.
 
-	br 	x2
+	br 	x20
 
 	// Given a virt addr and the PGD, set the PGD entry, allocate one PUD and one PMD.
 	//		link PGD -> PUD and PUD -> PMD
@@ -208,8 +216,31 @@ __create_page_tables:
 	/* Mapping device memory. Phys addr range: DEVICE_BASE--PHYS_MEMORY_SIZE(0x40000000) */
 	mov 	x1, #DEVICE_BASE					// x1 = start mapping from device base address
 	ldr 	x2, =(VA_START + DEVICE_BASE)				// x2 = first virtual address
-	ldr		x3, =(VA_START + PHYS_MEMORY_SIZE - SECTION_SIZE)	// x3 = the virtual base of the last section
+	ldr		x3, =(VA_START + GENERIC_TIMER_START - SECTION_SIZE)	// x3 = the virtual base of the last section
 	create_block_map x0, x1, x2, x3, MMU_DEVICE_FLAGS, x4
+
+  // Adding second PMD for timer translation
+    
+  // PGD --+PAGE_SIZE--> PUD --+PAGE_SIZE--> PMD1 --+PAGE_SIZE--> PMD2
+  // Fetch PUD address
+  adrp    x10, pg_dir
+  add     x10, x10, #PAGE_SIZE
+
+  // Fetch PMD address
+  adrp    x11, pg_dir
+  add     x11, x11, #(3 * PAGE_SIZE)
+    
+  // Map second PMD address
+  orr     x12, x11, #MM_TYPE_PAGE_TABLE 
+  str     x12, [x10, #8]
+
+  // Map timer addresses
+  mov     x0, x11
+  ldr     x1, =GENERIC_TIMER_START                 // Physical address of timer region
+  ldr     x2, =(VA_START + GENERIC_TIMER_START)    // Virtual address start
+  ldr     x3, =(VA_START + GENERIC_TIMER_START)    // Virtual address end : same address as start to enforce the mapping of a single section
+    
+  create_block_map x0, x1, x2, x3, MMU_DEVICE_FLAGS, x4
 
 	mov	x30, x29						// restore return address
 	ret
