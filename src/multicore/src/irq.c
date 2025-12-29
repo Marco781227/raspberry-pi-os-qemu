@@ -46,16 +46,16 @@ void handle_irq(void)
 {
   unsigned char core_id = get_core_id();
   unsigned long source_reg = INT_SOURCE_0 + (core_id * 4);
-  printf("Core %d : Interrupted \n", core_id);
+  printf("\nCore %d : IRQ \n", core_id);
   unsigned int irq = get32(source_reg);
 	switch (irq) {
 		case (GENERIC_TIMER_INTERRUPT):
       handle_generic_timer_irq();
 			break;
 		default:
-	 // printf("Inknown pending irq: %x\r\n", irq);
+	 printf("Inknown pending irq: %x\r\n", irq);
 	}
-  //printf("Core %d : Finished\n",core_id);
+  printf("Core %d : Finished\n",core_id);
 }
 
 #if 0

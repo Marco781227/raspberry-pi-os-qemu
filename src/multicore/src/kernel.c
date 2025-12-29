@@ -18,6 +18,7 @@ void kernel_process() {
     unsigned long begin = (unsigned long)&user_begin;
     unsigned long end = (unsigned long)&user_end;
     unsigned long process = (unsigned long)&user_process;
+    unlock();
     int err = move_to_user_mode(begin, end - begin, process - begin);
     if (err < 0) {
         printf("Error while moving process to user mode\n\r");

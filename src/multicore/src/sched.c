@@ -26,11 +26,12 @@ void preempt_enable(unsigned char core_id) {
 }
 
 void _schedule(unsigned char core_id) {
+    printf("Core %d : SCHEDULE -- Disabling preemt of task : %d\n",core_id, currents[core_id]);
     preempt_disable(core_id);
     printf("Core %d : Arrived in _schedule\n",core_id);
     int next, c;
     struct task_struct *p;
-    c = -1;
+    c = 0;
     next = core_id;
     for (int i = NB_CPU; i < NR_TASKS; i++) {
         p = task[i];
@@ -39,10 +40,10 @@ void _schedule(unsigned char core_id) {
             next = i;
         }
     }
-    if (c <= 0) {
+    if (c == 0) {
       for (int i = 0; i < NR_TASKS; i++) {
           p = task[i];
-          if (p) {
+          if (p && !p->taken) {
               p->counter = (p->counter >> 1) + p->priority;
           }
       }
@@ -51,6 +52,7 @@ void _schedule(unsigned char core_id) {
       task[next]->taken = 1;
     }
     switch_to(task[next]);
+    printf("Core %d : SCHEDULE -- Enabling preemt of task : %d\n",core_id, currents[core_id]);
     preempt_enable(core_id);
 }
 
@@ -71,14 +73,13 @@ void switch_to(struct task_struct *next) {
     set_pgd(next->mm.pgd);
 
     printf("Core %d : Taking next, Prev : %d, Next : %d\n",core_id, prev, next);
-
-    unlock(); // Release the kernel before switching context
     cpu_switch_to(prev, next);
-    lock(); // Reentering the kernel necessitates a lock as it is a critical section
+    printf("Core %d : Returning from cpu_switch_to, Prev : %d, Next : %d\n",core_id, prev, next);
 }
 
 void schedule_tail(void) {
     unsigned char core_id = get_core_id();
+    printf("Core %d : TAIL -- Enabling preemt of task : %d\n",core_id, currents[core_id]);
     preempt_enable(core_id);
 }
 

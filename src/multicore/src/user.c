@@ -25,7 +25,7 @@ void user_process()
 		call_sys_exit();
 		return;
 	}
-	if (pid != 0)
+	if (pid == 0)
 		loop("azazazaz");
 
   // Second child
@@ -36,7 +36,7 @@ void user_process()
 		call_sys_exit();
 		return;
 	}
-	if (pid != 0)
+	if (pid == 0)
 		loop("erererer");
 
   // Third child
@@ -47,7 +47,7 @@ void user_process()
 		call_sys_exit();
 		return;
 	}
-	if (pid != 0){
+	if (pid == 0){
 		loop("tytytyty");
 	}
 
@@ -59,7 +59,7 @@ void user_process()
 		call_sys_exit();
 		return;
 	}
-	if (pid != 0){
+	if (pid == 0){
 		loop("uiuiuiui");
 	}
 
@@ -71,7 +71,7 @@ void user_process()
 		call_sys_exit();
 		return;
 	}
-	if (pid != 0){
+	if (pid == 0){
 		loop("opopopop");
 	}
 
@@ -83,7 +83,7 @@ void user_process()
 		call_sys_exit();
 		return;
 	}
-	if (pid != 0){
+	if (pid == 0){
 		loop("qsqsqsqs");
 	}
 

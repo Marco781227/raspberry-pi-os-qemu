@@ -183,7 +183,6 @@ el0_svc:
 	adr	stbl, sys_call_table			// load syscall table pointer
 	uxtw	scno, w8				// syscall number in w8
 	mov	sc_nr, #__NR_syscalls
-	bl	enable_irq
 	cmp     scno, sc_nr                     	// check upper syscall limit
 	b.hs	ni_sys
 
@@ -193,13 +192,11 @@ el0_svc:
 ni_sys:
 	handle_invalid_entry 0, SYSCALL_ERROR
 ret_from_syscall:
-	bl	disable_irq
 	str	x0, [sp, #S_X0]				// returned x0
   bl unlock
 	kernel_exit 0
 
 el0_da:
-	bl	enable_irq
 	mrs	x0, far_el1
 	mrs	x1, esr_el1
 	bl	do_mem_abort
@@ -207,19 +204,19 @@ el0_da:
 	b.eq 1f
 	handle_invalid_entry 0, DATA_ABORT_ERROR
 1:
-	bl disable_irq
   bl unlock
 	kernel_exit 0
 
 .globl ret_from_fork
 ret_from_fork:
 	bl	schedule_tail
+  bl unlock
 	cbz	x19, ret_to_user			// not a kernel thread
 	mov	x0, x20
 	blr	x19
 ret_to_user:
+//  bl unlock // Free the lock applied to kernel process
 	bl disable_irq
-  bl unlock
 	kernel_exit 0
 
 

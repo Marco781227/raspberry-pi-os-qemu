@@ -46,7 +46,6 @@ void handle_generic_timer_irq( void )
 {
 	gen_timer_reset();
   unsigned char core_id = get_core_id();
-  printf("Core %d : Inside handle_generic_timer \n", core_id);
 	timer_tick();
 }
 
