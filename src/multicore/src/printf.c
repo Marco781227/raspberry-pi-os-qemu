@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
 #include "printf.h"
+#include "spinlock.h"
 
 typedef void (*putcf) (void*,char);
 static putcf stdout_putf;
@@ -210,10 +211,12 @@ void init_printf(void* putp,void (*putf) (void*,char))
 
 void tfp_printf(char *fmt, ...)
     {
+    lock_write();
     va_list va;
     va_start(va,fmt);
     tfp_format(stdout_putp,stdout_putf,fmt,va);
     va_end(va);
+    unlock_write();
     }
 
 static void putcp(void* p,char c)

@@ -1,24 +1,19 @@
 #include <stddef.h>
 #include <stdint.h>
-
 #include "fork.h"
 #include "irq.h"
 #include "mini_uart.h"
 #include "printf.h"
 #include "sched.h"
-#include "spinlock.h"
-#include "sys.h"
 #include "timer.h"
 #include "user.h"
 #include "utils.h"
 
 void kernel_process() {
-    lock();
     printf("Kernel process started. EL %d\r\n", get_el());
     unsigned long begin = (unsigned long)&user_begin;
     unsigned long end = (unsigned long)&user_end;
     unsigned long process = (unsigned long)&user_process;
-    unlock();
     int err = move_to_user_mode(begin, end - begin, process - begin);
     if (err < 0) {
         printf("Error while moving process to user mode\n\r");
@@ -28,7 +23,6 @@ void kernel_process() {
 void kernel_main() {
     unsigned char core_id = get_core_id();
     // Core 0 initializes the uart and IRQ controller before waiting for the other cores to start
-    lock();
     if (core_id == 0){
       uart_init();
       init_printf(NULL, putc);
@@ -47,11 +41,8 @@ void kernel_main() {
     enable_irq();
 
     printf("Core %d : Successfully started\n", core_id);
-    unlock();
     while(1){
-      lock();
       schedule(core_id);
-      unlock();
       asm("wfi");
     }
 }

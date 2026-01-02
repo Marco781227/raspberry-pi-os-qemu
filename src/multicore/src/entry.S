@@ -35,8 +35,6 @@
 	stp	x26, x27, [sp, #16 * 13]
 	stp	x28, x29, [sp, #16 * 14]
 
-    // bl lock // mutex acquisition
-
 	.if	\el == 0
 	mrs	x21, sp_el0
 	.else
@@ -61,8 +59,6 @@
 
 	msr	elr_el1, x22
 	msr	spsr_el1, x23
-
-    // bl unlock // mutex free
 
 	ldp	x0, x1, [sp, #16 * 0]
 	ldp	x2, x3, [sp, #16 * 1]
@@ -152,21 +148,16 @@ error_invalid_el0_32:
 
 el1_irq:
 	kernel_entry 1
-  bl lock
   bl handle_irq
-  bl unlock
 	kernel_exit 1
 
 el0_irq:
 	kernel_entry 0
-  bl lock
 	bl	handle_irq
-  bl unlock
 	kernel_exit 0
 
 el0_sync:
 	kernel_entry 0
-  bl lock
 	mrs	x25, esr_el1				// read the syndrome register
 	lsr	x24, x25, #ESR_ELx_EC_SHIFT		// exception class
 	cmp	x24, #ESR_ELx_EC_SVC64			// SVC in 64-bit state
@@ -193,7 +184,6 @@ ni_sys:
 	handle_invalid_entry 0, SYSCALL_ERROR
 ret_from_syscall:
 	str	x0, [sp, #S_X0]				// returned x0
-  bl unlock
 	kernel_exit 0
 
 el0_da:
@@ -204,18 +194,16 @@ el0_da:
 	b.eq 1f
 	handle_invalid_entry 0, DATA_ABORT_ERROR
 1:
-  bl unlock
 	kernel_exit 0
 
 .globl ret_from_fork
 ret_from_fork:
 	bl	schedule_tail
-  bl unlock
+  bl unlock_sched
 	cbz	x19, ret_to_user			// not a kernel thread
 	mov	x0, x20
 	blr	x19
 ret_to_user:
-//  bl unlock // Free the lock applied to kernel process
 	bl disable_irq
 	kernel_exit 0
 
