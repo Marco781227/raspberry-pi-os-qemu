@@ -5,6 +5,7 @@
 #include "mini_uart.h"
 #include "printf.h"
 #include "sched.h"
+#include "spinlock.h"
 #include "timer.h"
 #include "user.h"
 #include "utils.h"
@@ -42,7 +43,9 @@ void kernel_main() {
 
     printf("Core %d : Successfully started\n", core_id);
     while(1){
+      printf("Core %d : Just woke up, looking for tasks to execute\n", get_core_id());
       schedule(core_id);
+      unlock_sched();
       asm("wfi");
     }
 }
