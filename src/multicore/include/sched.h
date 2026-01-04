@@ -19,9 +19,13 @@
 
 #define PF_KTHREAD 0x00000002
 
-extern struct task_struct *currents[NB_CPU];
-extern struct task_struct *task[NR_TASKS];
-extern int nr_tasks;
+struct runqueue {
+    struct task_struct *current;
+    struct task_struct *idle;
+    struct task_struct *task_list; // chained list of runnables tasks
+};
+
+extern struct runqueue runqueues[NB_CPU];
 
 struct cpu_context {
     unsigned long x19;
@@ -63,14 +67,16 @@ struct task_struct {
     long preempt_count;
     unsigned long flags;
     struct mm_struct mm;
-    unsigned char taken;
+
+    unsigned char cpu; // cpu propriétaire
+    struct task_struct *next; 
 };
 
 extern void sched_init(void);
-extern void schedule(unsigned char core_id);
+extern void schedule(void);
 extern void timer_tick(void);
-extern void preempt_disable(unsigned char core_id);
-extern void preempt_enable(unsigned char core_id);
+extern void preempt_disable(void);
+extern void preempt_enable(void);
 extern void switch_to(struct task_struct *next);
 extern void cpu_switch_to(struct task_struct *prev, struct task_struct *next);
 extern void exit_process(void);
@@ -80,7 +86,9 @@ extern void exit_process(void);
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, /* state etc */ 0, 0, 15, 0,  \
             PF_KTHREAD, /* mm */ {                                             \
             0, 0, {{0}}, 0, {0}                                                \
-        }                                                                      \
+        },                                                                     \
+        0,                                                                     \
+        NULL                                                                   \
     }
 #endif
 #endif

@@ -8,106 +8,123 @@ static struct task_struct init_task_0 = INIT_TASK;
 static struct task_struct init_task_1 = INIT_TASK;
 static struct task_struct init_task_2 = INIT_TASK;
 static struct task_struct init_task_3 = INIT_TASK;
-struct task_struct *currents[NB_CPU] = { &(init_task_0), &(init_task_1), &(init_task_2), &(init_task_3)};
-struct task_struct *task[NR_TASKS] = {
-    &(init_task_0),
-    &(init_task_1),
-    &(init_task_2),
-    &(init_task_3),
-};
-int nr_tasks = NB_CPU;
 
-void preempt_disable(unsigned char core_id) {
-    currents[core_id]->preempt_count++;
+struct runqueue runqueues[NB_CPU];
+
+// MACRO : this_rq renvoie la runqueue du CPU courant
+static inline struct runqueue *this_rq(void)
+{
+    return &runqueues[get_core_id()];
 }
 
-void preempt_enable(unsigned char core_id) {
-    currents[core_id]->preempt_count--;
+void sched_init(void)
+{
+    struct task_struct *init_tasks[NB_CPU] = {
+        &init_task_0, &init_task_1, &init_task_2, &init_task_3
+    };
+
+    for (int cpu = 0; cpu < NB_CPU; cpu++) {
+        struct runqueue *rq = &runqueues[cpu];
+
+        //spin_lock_init(&rq->lock); no locks for now
+
+        rq->idle = init_tasks[cpu];
+        rq->current = rq->idle;
+        rq->task_list = rq->idle;
+
+        rq->idle->cpu = cpu;
+        rq->idle->state = TASK_RUNNING;
+        rq->idle->counter = 0;
+        rq->idle->next = NULL;
+    }
 }
 
-void _schedule(unsigned char core_id) {
-    printf("Core %d : SCHEDULE -- Disabling preemt of task : %d with counter : %d\n",core_id, currents[core_id], currents[core_id]->counter);
-    preempt_disable(core_id);
-    int next, c;
-    struct task_struct *p;
-    c = 0;
-    next = core_id;
-    lock_sched();
-    for (int i = NB_CPU; i < NR_TASKS; i++) {
-        p = task[i];
-        if (p && p->state == TASK_RUNNING && p->counter > c && !p->taken) {
+void preempt_disable(void) {
+    this_rq()->current->preempt_count++;
+}
+
+void preempt_enable(void) {
+    this_rq()->current->preempt_count--;
+}
+
+void _schedule(void) {
+    struct runqueue *rq = this_rq();
+    struct task_struct *p, *next = rq->idle;
+    int c = 0;
+
+    printf("Core %d : SCHEDULE -- Disabling preemt of task : %d with counter : %d\n",p->cpu, p, p->counter);
+    preempt_disable();
+
+    //lock_sched(); pas de lock pour le moment
+    
+    for (p = rq->task_list; p; p = p->next) {
+        if (p->state == TASK_RUNNING && p->counter > c) {
             c = p->counter;
-            next = i;
+            next = p;
         }
     }
+    
     if (c == 0) {
-      for (int i = 0; i < NR_TASKS; i++) {
-          p = task[i];
-          if (p && !p->taken) {
-              p->counter = (p->counter >> 1) + p->priority;
-          }
-      }
+        for (p = rq->task_list; p; p = p->next)
+            p->counter = (p->counter >> 1) + p->priority;
     }
-    else {
-      task[next]->taken = 1;
-    }
-    switch_to(task[next]);
-    core_id = get_core_id();
-    printf("Core %d : SCHEDULE -- Enabling preemt of task : %d with counter : %d\n",core_id, currents[core_id], currents[core_id]->counter);
-    preempt_enable(core_id);
+
+    if (rq->current != next)
+        switch_to(next);
+
+    printf("Core %d : SCHEDULE -- Enabling preemt of task : %d with counter : %d\n",p->cpu, p, p->counter);
+    preempt_enable();
 }
 
-void schedule(unsigned char core_id) {
-    currents[core_id]->counter = 0;
-    _schedule(core_id);
+void schedule(void)
+{
+    this_rq()->current->counter = 0;
+    _schedule();
 }
 
 void switch_to(struct task_struct *next) {
-    unsigned char core_id = get_core_id();
-    if (currents[core_id] == next)
+    struct runqueue *rq = this_rq();
+    struct task_struct *prev = rq->current;
+
+    if (prev == next)
         return;
 
-    struct task_struct *prev = currents[core_id];
-    prev->taken = 0;
-    currents[core_id] = next;
+    rq->current = next;
     set_pgd(next->mm.pgd);
 
-    printf("Core %d : Taking next, Prev : %d, Next : %d\n",core_id, prev, next);
+    printf("Core %d : switch %p -> %p\n",
+           get_core_id(), prev, next);
+
     cpu_switch_to(prev, next);
-    unlock_sched();
-    core_id = get_core_id();
-    printf("Core %d : Returning from cpu_switch_to, Prev : %d, Next : %d\n",core_id, prev, next);
 }
 
-void schedule_tail(void) {
-    unsigned char core_id = get_core_id();
-    printf("Core %d : TAIL -- Enabling preemt of task : %d\n",core_id, currents[core_id]);
-    preempt_enable(core_id);
-}
+void timer_tick(void)
+{
+    struct runqueue *rq = this_rq();
+    struct task_struct *curr = rq->current;
 
-void timer_tick() {
-    unsigned char core_id = get_core_id();
-    --currents[core_id]->counter;
-    printf("Core %d : Arrived in timer_tick, task : %d counter : %d, preemp : %d\n",core_id, currents[core_id], currents[core_id]->counter, currents[core_id]->preempt_count);
-    if (currents[core_id]->counter > 0 ||
-        currents[core_id]->preempt_count > 0) {
+    curr->counter--;
+
+    printf("Core %d : tick task=%p counter=%ld preempt=%ld\n",
+           get_core_id(), curr, curr->counter, curr->preempt_count);
+
+    if (curr->counter > 0 || curr->preempt_count > 0)
         return;
-    }
-    currents[core_id]->counter = 0;
+
+    curr->counter = 0;
     enable_irq();
-    _schedule(core_id);
+    _schedule();
     disable_irq();
 }
 
-void exit_process() {
-    unsigned char core_id = get_core_id();
-    preempt_disable(core_id);
-    for (int i = 0; i < NR_TASKS; i++) {
-        if (task[i] == currents[core_id]) {
-            task[i]->state = TASK_ZOMBIE;
-            break;
-        }
-    }
-    preempt_enable(core_id);
-    schedule(core_id);
+void exit_process(void)
+{
+    struct runqueue *rq = this_rq();
+    struct task_struct *p = rq->current;
+
+    preempt_disable();
+    p->state = TASK_ZOMBIE;
+    preempt_enable();
+
+    schedule();
 }

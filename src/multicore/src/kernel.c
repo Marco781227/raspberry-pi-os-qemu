@@ -39,13 +39,14 @@ void kernel_main() {
     }
     irq_vector_init();
     generic_timer_init();
+    sched_init();
     enable_irq();
 
     printf("Core %d : Successfully started\n", core_id);
     while(1){
       printf("Core %d : Just woke up, looking for tasks to execute\n", get_core_id());
-      schedule(core_id);
-      unlock_sched();
+      schedule();
+      //unlock_sched();
       asm("wfi");
     }
 }
