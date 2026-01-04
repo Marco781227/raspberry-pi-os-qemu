@@ -3,6 +3,7 @@
 #include "utils.h"
 #include <printf.h>
 #include "spinlock.h"
+#include <stddef.h>
 
 static struct task_struct init_task_0 = INIT_TASK;
 static struct task_struct init_task_1 = INIT_TASK;

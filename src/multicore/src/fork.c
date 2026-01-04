@@ -60,3 +60,29 @@ int copy_process(unsigned long clone_flags,
     preempt_enable();
     return 0;   /* pas encore de PID global */
 }
+
+int move_to_user_mode(unsigned long start,
+                      unsigned long size,
+                      unsigned long pc)
+{
+    struct task_struct *current = this_rq()->current;
+    struct pt_regs *regs = task_pt_regs(current);
+
+    regs->pstate = PSR_MODE_EL0t;
+    regs->pc = pc;
+    regs->sp = 2 * PAGE_SIZE;
+
+    unsigned long code_page = allocate_user_page(current, 0);
+    if (!code_page)
+        return -1;
+
+    memcpy(start, code_page, size);
+    set_pgd(current->mm.pgd);
+    return 0;
+}
+
+struct pt_regs *task_pt_regs(struct task_struct *tsk) {
+  unsigned long p = (unsigned long)tsk + THREAD_SIZE - sizeof(struct pt_regs);
+  return (struct pt_regs *)p;
+}
+

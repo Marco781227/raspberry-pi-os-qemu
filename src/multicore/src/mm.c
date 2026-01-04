@@ -2,7 +2,13 @@
 #include "arm/mmu.h"
 #include "spinlock.h"
 #include "utils.h"
-#include <string.h>
+
+
+// returns the runqueue of the current core
+static inline struct runqueue *this_rq(void)
+{
+    return &runqueues[get_core_id()];
+}
 
 /* minimalist page allocation */
 static unsigned short mem_map[PAGING_PAGES] = {0};
