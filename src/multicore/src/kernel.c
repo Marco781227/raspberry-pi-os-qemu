@@ -45,7 +45,6 @@ void kernel_main() {
     while(1){
       printf("Core %d : Just woke up, looking for tasks to execute\n", get_core_id());
       schedule(core_id);
-      unlock_sched();
       asm("wfi");
     }
 }

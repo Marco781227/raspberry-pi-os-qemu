@@ -64,8 +64,10 @@ void schedule(unsigned char core_id) {
 
 void switch_to(struct task_struct *next) {
     unsigned char core_id = get_core_id();
-    if (currents[core_id] == next)
+    if (currents[core_id] == next){
+        unlock_sched();
         return;
+    }
 
     struct task_struct *prev = currents[core_id];
     prev->taken = 0;
