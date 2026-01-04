@@ -68,7 +68,7 @@ struct task_struct {
     unsigned long flags;
     struct mm_struct mm;
 
-    unsigned char cpu; // cpu propriétaire
+    unsigned char cpu;
     struct task_struct *next; 
 };
 

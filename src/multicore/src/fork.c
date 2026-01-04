@@ -6,6 +6,13 @@
 #include "spinlock.h"
 #include "printf.h"
 
+
+// returns the runqueue of the current core
+static inline struct runqueue *this_rq(void)
+{
+    return &runqueues[get_core_id()];
+}
+
 int copy_process(unsigned long clone_flags,
                  unsigned long fn,
                  unsigned long arg)

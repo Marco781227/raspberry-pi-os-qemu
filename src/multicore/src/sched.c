@@ -11,7 +11,8 @@ static struct task_struct init_task_3 = INIT_TASK;
 
 struct runqueue runqueues[NB_CPU];
 
-// MACRO : this_rq renvoie la runqueue du CPU courant
+
+// returns the runqueue of the current core
 static inline struct runqueue *this_rq(void)
 {
     return &runqueues[get_core_id()];
