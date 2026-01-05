@@ -7,7 +7,7 @@ lock:
     adrp x10, mutex
     add x10, x10, #:lo12:mutex
     
-    // Check si déjà propriétaire
+    // Check ownership
     ldrb w11, [x10]
     cmp w11, w9
     b.eq 1f
@@ -16,9 +16,9 @@ lock:
 spinloop:  
     ldxrb w11, [x10]
     cmp w11, #0xFF
-    b.ne spinloop // Check si mutex libre
+    b.ne spinloop // Check mutex availability
     stxrb w11, w9, [x10]
-    cbnz w11, spinloop // Check si exclusivité valide
+    cbnz w11, spinloop // Check if memory access was exclusive
     dmb sy
     
 1:  ret
