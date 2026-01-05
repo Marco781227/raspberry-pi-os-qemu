@@ -3,10 +3,13 @@
 #include "mm.h"
 #include "sched.h"
 #include "utils.h"
+#include "spinlock.h"
+#include "printf.h"
 
 int copy_process(unsigned long clone_flags, unsigned long fn,
                  unsigned long arg) {
     unsigned char core_id = get_core_id();
+    //printf("Core %d : Creating a process\n", core_id);
     preempt_disable(core_id);
     struct task_struct *p;
 
@@ -34,7 +37,9 @@ int copy_process(unsigned long clone_flags, unsigned long fn,
 
     p->cpu_context.pc = (unsigned long)ret_from_fork;
     p->cpu_context.sp = (unsigned long)childregs;
-    int pid = nr_tasks++;
+    //printf("Core %d : Nr_tasks before : %d\n", core_id, nr_tasks);
+    int pid = atomic_add(&nr_tasks, 1);
+    //printf("Core %d : Nr_tasks after : %d\n", core_id, nr_tasks);
     task[pid] = p;
 
     preempt_enable(core_id);

@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "spinlock.h"
 #include "peripherals/mini_uart.h"
 #include "peripherals/gpio.h"
 

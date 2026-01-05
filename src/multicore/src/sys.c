@@ -3,6 +3,7 @@
 #include "utils.h"
 #include "sched.h"
 #include "mm.h"
+#include "spinlock.h"
 
 
 void sys_write(char * buf){
