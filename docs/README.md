@@ -32,7 +32,7 @@ Each experiment is self-contained and can run on both QEMU and real Raspberry Pi
 6. **Into virtual**
       * [Virtual memory management](lesson06/rpi-os.md)
 7. **Multicore**
-      * [Waking up cores, Biglock and small spinlocks](multicore/Documentation - Multicore support.pdf)
+      * [Waking up cores, Biglock and small spinlocks](multicore/)
 
 ## Acknowledgements
 1. Sergey Matyukevich, Alexandre Venito et al. made the educational kernel and most of the resources in https://github.com/s-matyukevich/raspberry-pi-os
