@@ -31,7 +31,6 @@ int copy_process(unsigned long clone_flags,
     struct task_struct *p = (struct task_struct *)page;
     struct pt_regs *childregs = task_pt_regs(p);
 
-    /* Copie du contexte */
     if (clone_flags & PF_KTHREAD) {
         p->cpu_context.x19 = fn;
         p->cpu_context.x20 = arg;
@@ -42,23 +41,21 @@ int copy_process(unsigned long clone_flags,
         copy_virt_memory(p);
     }
 
-    /* Initialisation de la task */
     p->flags = clone_flags;
     p->priority = current->priority;
     p->state = TASK_RUNNING;
     p->counter = p->priority;
-    p->preempt_count = 1;   /* pas préemptable avant premier schedule */
+    p->preempt_count = 1;
     p->cpu = current->cpu;
 
     p->cpu_context.pc = (unsigned long)ret_from_fork;
     p->cpu_context.sp = (unsigned long)childregs;
 
-    /* Insertion dans la runqueue locale */
     p->next = rq->task_list;
     rq->task_list = p;
 
     preempt_enable();
-    return 0;   /* pas encore de PID global */
+    return 0;
 }
 
 int move_to_user_mode(unsigned long start,

@@ -21,6 +21,7 @@ static inline struct runqueue *this_rq(void)
 
 void sched_init(void)
 {
+    printf("Initiate scheduler\n");
     struct task_struct *init_tasks[NB_CPU] = {
         &init_task_0, &init_task_1, &init_task_2, &init_task_3
     };
@@ -56,8 +57,6 @@ void _schedule(void) {
 
     printf("Core %d : SCHEDULE -- Disabling preemt of task : %d with counter : %d\n",p->cpu, p, p->counter);
     preempt_disable();
-
-    //lock_sched(); pas de lock pour le moment
     
     for (p = rq->task_list; p; p = p->next) {
         if (p->state == TASK_RUNNING && p->counter > c) {

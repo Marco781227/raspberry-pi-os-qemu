@@ -39,7 +39,7 @@ void kernel_main() {
     }
     irq_vector_init();
     generic_timer_init();
-    sched_init();
+    if (core_id == 0) sched_init();
     enable_irq();
 
     printf("Core %d : Successfully started\n", core_id);
