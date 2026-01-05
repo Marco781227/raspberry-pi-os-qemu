@@ -89,6 +89,7 @@ void switch_to(struct task_struct *next) {
 
     if (prev == next)
         return;
+    }
 
     rq->current = next;
     set_pgd(next->mm.pgd);
